@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34525.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpWizzDriver", "SharpWizzDriver\SharpWizzDriver.csproj", "{E894DACC-A98B-470B-B7E5-CEB9D1AF4F8E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpWizzDriver.WPF", "SharpWizzDriver.WPF\SharpWizzDriver.WPF.csproj", "{F91D720E-6A33-46A8-91B9-D468421178FE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Apps", "Apps", "{07B207E7-7615-44D5-AEFD-68D6DA3D02D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpWizzGamepadControl", "SharpWizzGamepadControl\SharpWizzGamepadControl.csproj", "{CBCD9AEF-82C8-4330-B362-7DD863F39E94}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E894DACC-A98B-470B-B7E5-CEB9D1AF4F8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E894DACC-A98B-470B-B7E5-CEB9D1AF4F8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E894DACC-A98B-470B-B7E5-CEB9D1AF4F8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E894DACC-A98B-470B-B7E5-CEB9D1AF4F8E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F91D720E-6A33-46A8-91B9-D468421178FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F91D720E-6A33-46A8-91B9-D468421178FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F91D720E-6A33-46A8-91B9-D468421178FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F91D720E-6A33-46A8-91B9-D468421178FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBCD9AEF-82C8-4330-B362-7DD863F39E94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBCD9AEF-82C8-4330-B362-7DD863F39E94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBCD9AEF-82C8-4330-B362-7DD863F39E94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBCD9AEF-82C8-4330-B362-7DD863F39E94}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CBCD9AEF-82C8-4330-B362-7DD863F39E94} = {07B207E7-7615-44D5-AEFD-68D6DA3D02D0}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {84FBDED1-A81A-4C79-9DD3-4AEF3FBB08EE}
+	EndGlobalSection
+EndGlobal

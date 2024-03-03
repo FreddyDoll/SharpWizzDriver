@@ -1,0 +1,21 @@
+﻿<Window x:Class="SharpWizzGamepadControl.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SharpWizzGamepadControl" 
+        xmlns:swp="clr-namespace:SharpWizzDriver.WPF;assembly=SharpWizzDriver.WPF" 
+        d:DataContext="{d:DesignInstance Type=local:MainWindow}"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800"
+        Closing="Window_Closing">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Left">
+            <swp:BuWizzView DataContext="{Binding BuWizz}" />
+            <Button Content="Run GampadControl" Command="{Binding RunGamepadControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+        </StackPanel>
+        <ContentControl>
+            
+        </ContentControl>
+    </DockPanel>
+</Window>
