@@ -1,5 +1,10 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using SharpWizzDriver.Telemetry;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+
 
 namespace SharpWizzDriver
 {
@@ -23,6 +28,11 @@ namespace SharpWizzDriver
 
         [ObservableProperty]
         bool requestPidTelemetry = false;
+
+        [ObservableProperty]
+        PuPortFunction mode = PuPortFunction.GenericPwmOutput;
+
+        public IEnumerable<PuPortFunction> AvailableModes => Enum.GetValues(typeof(PuPortFunction)).Cast<PuPortFunction>();
 
         public BuWizzPuPort(string name) : base(name)
         {

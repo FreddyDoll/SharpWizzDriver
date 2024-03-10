@@ -24,4 +24,5 @@ namespace SharpWizzDriver
         Connecting,
         Connected
     }
+
 }

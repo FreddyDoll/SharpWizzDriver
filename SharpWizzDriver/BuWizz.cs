@@ -102,34 +102,33 @@ namespace SharpWizzDriver
             if (s is null)
             {
                 _logger?.LogWarning("Sine was null, created");
-                s = new SineWave(1, 100);
+                s = new SineWave(0.4, 0.4);
             }
 
-            CancellationTokenSource? movementCts = null;
             try
             {
-                movementCts = CreateMovementCts(tokenCommand);
+                foreach (var item in State.PuPorts)
+                    item.Mode = PuPortFunction.PuSimplePwm;
 
-                var motors = new double[6];
+                Queue<MotorDataArgs> path = new Queue<MotorDataArgs>();
 
-                var sw = Stopwatch.StartNew();
-
-                while (true)
+                var deltaT = TimeSpan.FromMilliseconds(100);
+                var time = TimeSpan.FromSeconds(3);
+                double steps = (time.TotalSeconds / deltaT.TotalSeconds);
+                for (int i = 0; i < steps; i++)
                 {
-                    for (int i = 0; i < motors.Length; i++)
-                        motors[i] = s.A * Math.Sin(sw.Elapsed.TotalSeconds / s.F);
-                    await Connection.SetMotorData(motors, 0, 0xff);
-
-                    await Task.Delay(50, movementCts.Token);
+                    var t = new MotorDataArgs();
+                    for (int n = 0; n < t.PfMotors.Length; n++)
+                        t.PfMotors[n].TargetValue = s.A * Math.Sin(deltaT.TotalSeconds * i * 2.0 * Math.PI * s.F);
+                    path.Enqueue(t);
                 }
+
+                await RunMotorData((t) => path.Dequeue(), deltaT, tokenCommand);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                LogCommandException("Motors Sine", ex);
-            }
-            finally
-            {
-                await DestroyMovementCts(movementCts);
+                LogCommandException("Motors Sine PWM", ex);
             }
         }
 
@@ -141,44 +140,33 @@ namespace SharpWizzDriver
             if (s is null)
             {
                 _logger?.LogWarning("Sine was null, created");
-                s = new SineWave(3, 100);
+                s = new SineWave(0.5, 126);
             }
 
-            CancellationTokenSource? movementCts = null;
             try
             {
-                movementCts = CreateMovementCts(tokenCommand);
+                foreach (var item in State.PuPorts)
+                    item.Mode = PuPortFunction.PuSpeedServo;
 
-                var motors = new int[4];
+                Queue<ExtendedMotorDataArgs> path = new ();
 
-                await Connection.SetServoReferenceInput(motors);
-                await Connection.SetMotorData(new double[6], 0, 0xff);
-                await Connection.SetPUPortFunction(
-                [
-                    PuPortFunction.PuSpeedServo,
-                    PuPortFunction.PuSpeedServo,
-                    PuPortFunction.PuSpeedServo,
-                    PuPortFunction.PuSpeedServo
-                ]);
-
-                var sw = Stopwatch.StartNew();
-
-                while (true)
+                var deltaT = TimeSpan.FromMilliseconds(100);
+                var time = TimeSpan.FromSeconds(3);
+                double steps = (time.TotalSeconds / deltaT.TotalSeconds);
+                for (int i = 0; i < steps; i++)
                 {
-                    for (int i = 0; i < motors.Length; i++)
-                        motors[i] = (int)Math.Round(s.A * Math.Sin(sw.Elapsed.TotalSeconds / s.F));
-                    await Connection.SetServoReferenceInput(motors);
-
-                    await Task.Delay(50, movementCts.Token);
+                    var t = new ExtendedMotorDataArgs();
+                    for (int n = 0; n < t.PuMotors.Length; n++)
+                        t.PuMotors[n].TargetValue = s.A * Math.Sin(deltaT.TotalSeconds * i * 2.0 * Math.PI * s.F);
+                    path.Enqueue(t);
                 }
+
+                await RunExtendedMotorData((t) => path.Dequeue(), TimeSpan.FromMilliseconds(100), tokenCommand);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 LogCommandException("Motors Sine", ex);
-            }
-            finally
-            {
-                await DestroyMovementCts(movementCts);
             }
         }
 
@@ -190,34 +178,34 @@ namespace SharpWizzDriver
             if (s is null)
             {
                 _logger?.LogWarning("Sine was null, created");
-                s = new SineWave(1, 100);
+                s = new SineWave(0.2, 200);
             }
 
-            CancellationTokenSource? movementCts = null;
             try
             {
-                movementCts = CreateMovementCts(tokenCommand);
 
-                var motors = new double[6];
+                foreach (var item in State.PuPorts)
+                    item.Mode = PuPortFunction.PuPositionServo;
 
-                var sw = Stopwatch.StartNew();
+                Queue<ExtendedMotorDataArgs> path = new();
 
-                while (true)
+                var deltaT = TimeSpan.FromMilliseconds(100);
+                var time = TimeSpan.FromSeconds(3);
+                double steps = (time.TotalSeconds / deltaT.TotalSeconds);
+                for (int i = 0; i < steps; i++)
                 {
-                    for (int i = 0; i < motors.Length; i++)
-                        motors[i] = s.A * Math.Sin(sw.Elapsed.TotalSeconds / s.F);
-                    await Connection.SetMotorData(motors, 0, 0xff);
-
-                    await Task.Delay(50, movementCts.Token);
+                    var t = new ExtendedMotorDataArgs();
+                    for (int n = 0; n < t.PuMotors.Length; n++)
+                        t.PuMotors[n].TargetValue = s.A * Math.Sin(deltaT.TotalSeconds * i * 2.0 * Math.PI * s.F);
+                    path.Enqueue(t);
                 }
+
+                await RunExtendedMotorData((t) => path.Dequeue(), TimeSpan.FromMilliseconds(100), tokenCommand);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 LogCommandException("Motors Sine", ex);
-            }
-            finally
-            {
-               await DestroyMovementCts(movementCts);
             }
         }
         #endregion
@@ -298,6 +286,10 @@ namespace SharpWizzDriver
                     _logger?.LogInformation($"Switched Pid Telemetry Target to Port {port.Name}");
                     OnPropertyChanged(nameof(PidTelemtryTarget));
                     port.RequestPidTelemetry = false;
+                }
+                else if (e.PropertyName == nameof(BuWizzPuPort.Mode))
+                {
+                    await Connection.SetPUPortFunction(State.PuPorts.Select(p => p.Mode).ToArray());
                 }
             }
             catch (Exception ex)

@@ -25,6 +25,12 @@
                     <TextBlock VerticalAlignment="Center" HorizontalAlignment="Right" Text="{Binding Connection.TransferPeriod.TotalMilliseconds, StringFormat=N2}" Margin="10,0,5,0" />
                 </UniformGrid>
             </DockPanel>
+            <UniformGrid Rows="1">
+                <Button Content="Test PWM" Command="{Binding SinePWMMotorsCommand}" IsEnabled="{Binding CanMove}" />
+                <Button Content="Test Speed"  Command="{Binding SineSpeedMotorsCommand}" IsEnabled="{Binding CanMove}" />
+                <Button Content="Test Position"  Command="{Binding SinePositionMotorsCommand}"  IsEnabled="{Binding CanMove}" />
+
+            </UniformGrid>
             <GroupBox Header="Power Function Ports">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <StackPanel>

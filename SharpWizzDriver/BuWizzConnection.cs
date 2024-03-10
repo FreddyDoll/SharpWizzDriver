@@ -51,7 +51,7 @@ namespace SharpWizzDriver
                 _device = await BluetoothLEDevice.FromIdAsync(info.Id);
                 _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
 
-                GattDeviceServicesResult result = await _device.GetGattServicesAsync(BluetoothCacheMode.Cached);
+                GattDeviceServicesResult result = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
 
                 var service = result.Services.First(s => s.Uuid == Guid.Parse("500592d1-74fb-4481-88b3-9919b1676e93"));
                 var charachteristics = (await service.GetCharacteristicsAsync()).Characteristics.ToArray();
@@ -224,7 +224,7 @@ namespace SharpWizzDriver
             await SetMotorData(targets.ToArray(), b, l);
         }
 
-        public async Task SetMotorDataExtended(int[] motorReferences, byte[] smallMotorData, byte brakeFlags, byte lutOptions)
+        public async Task SetMotorDataExtended(int[] motorReferences, sbyte[] smallMotorData, byte brakeFlags, byte lutOptions)
         {
             if (motorReferences.Length != 4 || smallMotorData.Length != 2)
                 throw new ArgumentException("Invalid motor references or small motor data.");
@@ -258,10 +258,10 @@ namespace SharpWizzDriver
                 offset++;
             }
 
-            List<byte> pfTargets = new();
+            List<sbyte> pfTargets = new();
             for (int i = 0; i < motors.PfMotors.Length; i++)
             {
-                puTargets.Add(ConvertDoubleToPfPWM(motors.PfMotors[i].TargetValue));
+                pfTargets.Add(ConvertDoubleToPfPWM(motors.PfMotors[i].TargetValue));
                 if (motors.PfMotors[i].BreakOnZero)
                     b |= (byte)(1 << offset);
                 if (motors.PfMotors[i].DeactivateLut)

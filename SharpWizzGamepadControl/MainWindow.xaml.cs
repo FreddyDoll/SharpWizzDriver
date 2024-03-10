@@ -1,9 +1,11 @@
-﻿using CommunityToolkit.Mvvm.Input;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpWizzDriver;
 using SharpWizzDriver.CallParameters;
 using SharpWizzDriver.Telemetry;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,19 +16,29 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Windows.Gaming.Input;
 
 namespace SharpWizzGamepadControl
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
+    [INotifyPropertyChanged]
     public partial class MainWindow : Window
     {
         public BuWizz BuWizz { get; }
 
+        [ObservableProperty]
+        GamepadReading? gamepadReading;
+        [ObservableProperty]
+        double leftThumbX = 0;
+
+        Gamepad? _gamepad;
+
         IHostApplicationLifetime _lifetime;
         bool _closeAccepted = false;
         ILogger<MainWindow> _logger;
+        int _frameCounter = 0;
 
         public MainWindow(
             ILogger<MainWindow> logger,
@@ -39,14 +51,29 @@ namespace SharpWizzGamepadControl
             BuWizz = buWizz;
             InitializeComponent();
             DataContext = this;
+
+            Gamepad.GamepadAdded += Gamepad_GamepadAdded;
+            CompositionTarget.Rendering += CompositionTarget_Rendering;
         }
 
-        MotorDataArgs GetMotorTargets(TimeSpan elapsed)
+        Stopwatch _swGamepad = Stopwatch.StartNew();
+        ExtendedMotorDataArgs GamepadMappingSpaceCrane(TimeSpan elapsed)
         {
-            _logger.LogInformation($"get targets: {elapsed.TotalSeconds}");
-            var t = new MotorDataArgs();
-            for (int n = 0; n < t.PfMotors.Length; n++)
-                t.PfMotors[n].TargetValue = Math.Sin(elapsed.TotalSeconds);
+            var t = new ExtendedMotorDataArgs();
+            if (_gamepad is null || GamepadReading is null)
+                return t;
+
+            t.PuMotors[0].TargetValue = GamepadReading.Value.RightThumbstickY * 126; //1 Vorne Heben
+            t.PuMotors[1].TargetValue = GamepadReading.Value.LeftThumbstickY * 126; //2 
+            t.PuMotors[2].TargetValue = GamepadReading.Value.LeftThumbstickY * 126; //3 Gegengewicht
+            t.PuMotors[3].TargetValue = GamepadReading.Value.LeftThumbstickX * 126; //4 vorne knicken
+
+            t.PfMotors[0].TargetValue = GamepadReading.Value.RightTrigger - GamepadReading.Value.LeftTrigger; //A Hoch/runter
+            t.PfMotors[1].TargetValue = GamepadReading.Value.RightThumbstickX; //B Drehen
+
+            _logger.LogInformation($"MotorDataUpdated: {_swGamepad.Elapsed.TotalMilliseconds}");
+            _swGamepad.Restart();
+
             return t;
         }
 
@@ -55,21 +82,32 @@ namespace SharpWizzGamepadControl
         {
             try
             {
-                Queue<MotorDataArgs> path = new Queue<MotorDataArgs> ();
-                for (int i = 0; i < 1000; i++)
-                {
-                    var t = new MotorDataArgs();
-                    for (int n = 0; n < t.PfMotors.Length; n++)
-                        t.PfMotors[n].TargetValue = Math.Sin(i/100.0);
-                    path.Enqueue(t);
-                }
-
-                await BuWizz.RunMotorData((t) => path.Dequeue(), TimeSpan.FromMilliseconds(50), _lifetime.ApplicationStopping);
-                //await BuWizz.RunMotorData(GetMotorTargets, TimeSpan.FromMilliseconds(50), _lifetime.ApplicationStopping);
+                await BuWizz.RunExtendedMotorData(GamepadMappingSpaceCrane, TimeSpan.FromMilliseconds(200), _lifetime.ApplicationStopping);
             }
             catch (OperationCanceledException)
             {
             }
+        }
+
+        #region callbacks
+        private void CompositionTarget_Rendering(object? sender, EventArgs e)
+        {
+            if (_frameCounter % 5 == 0)
+            {
+                //plotMain.Refresh();
+                //plotAccel.Refresh();
+                //plotKinematik.Refresh();
+                //plotPID.Refresh();
+            }
+            GamepadReading = _gamepad?.GetCurrentReading();
+            LeftThumbX = GamepadReading?.LeftThumbstickX ?? 0.0;
+
+            _frameCounter++;
+        }
+
+        private void Gamepad_GamepadAdded(object? sender, Gamepad e)
+        {
+            _gamepad = e;
         }
 
 
@@ -82,5 +120,6 @@ namespace SharpWizzGamepadControl
             e.Cancel = true;
             _lifetime.StopApplication();
         }
+        #endregion
     }
 }

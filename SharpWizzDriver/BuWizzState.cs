@@ -13,7 +13,7 @@ namespace SharpWizzDriver
         BuWizzPort[] ports;
 
         [ObservableProperty]
-        TimeSpan targetTransferPeriod = TimeSpan.FromMilliseconds(50);
+        TimeSpan targetTransferPeriod = TimeSpan.FromMilliseconds(200);
 
         public IEnumerable<BuWizzPuPort> PuPorts => Ports.Select(p => p as BuWizzPuPort).Where(p => p is not null).Cast<BuWizzPuPort>();
         public IEnumerable<BuWizzPfPort> PfPorts => Ports.Select(p => p as BuWizzPfPort).Where(p => p is not null).Cast<BuWizzPfPort>();
