@@ -30,15 +30,12 @@ namespace SharpWizzGamepadControl
 
         [ObservableProperty]
         GamepadReading? gamepadReading;
-        [ObservableProperty]
-        double leftThumbX = 0;
 
         Gamepad? _gamepad;
 
         IHostApplicationLifetime _lifetime;
         bool _closeAccepted = false;
         ILogger<MainWindow> _logger;
-        int _frameCounter = 0;
 
         public MainWindow(
             ILogger<MainWindow> logger,
@@ -63,13 +60,13 @@ namespace SharpWizzGamepadControl
             if (_gamepad is null || GamepadReading is null)
                 return t;
 
-            t.PuMotors[0].TargetValue = GamepadReading.Value.RightThumbstickY * 126; //1 Vorne Heben
-            t.PuMotors[1].TargetValue = GamepadReading.Value.LeftThumbstickY * 126; //2 
-            t.PuMotors[2].TargetValue = GamepadReading.Value.LeftThumbstickY * 126; //3 Gegengewicht
-            t.PuMotors[3].TargetValue = GamepadReading.Value.LeftThumbstickX * 126; //4 vorne knicken
+            t.PuMotors[0].TargetValue = (GamepadReading.Value.RightTrigger - GamepadReading.Value.LeftTrigger) * 126;  //Winde
+            t.PuMotors[1].TargetValue = GamepadReading.Value.LeftThumbstickX * 126;  //vorne knicken
+            t.PuMotors[2].TargetValue = GamepadReading.Value.LeftThumbstickY * 126; //Vorne Heben
+            t.PuMotors[3].TargetValue = GamepadReading.Value.RightThumbstickY * 126;  //Gegengewicht
 
-            t.PfMotors[0].TargetValue = GamepadReading.Value.RightTrigger - GamepadReading.Value.LeftTrigger; //A Hoch/runter
-            t.PfMotors[1].TargetValue = GamepadReading.Value.RightThumbstickX; //B Drehen
+            t.PfMotors[0].TargetValue = 0;
+            t.PfMotors[1].TargetValue = GamepadReading.Value.RightThumbstickX; //Drehen
 
             _logger.LogInformation($"MotorDataUpdated: {_swGamepad.Elapsed.TotalMilliseconds}");
             _swGamepad.Restart();
@@ -92,22 +89,21 @@ namespace SharpWizzGamepadControl
         #region callbacks
         private void CompositionTarget_Rendering(object? sender, EventArgs e)
         {
-            if (_frameCounter % 5 == 0)
-            {
-                //plotMain.Refresh();
-                //plotAccel.Refresh();
-                //plotKinematik.Refresh();
-                //plotPID.Refresh();
-            }
             GamepadReading = _gamepad?.GetCurrentReading();
-            LeftThumbX = GamepadReading?.LeftThumbstickX ?? 0.0;
 
-            _frameCounter++;
+            if (((GamepadReading?.Buttons ?? GamepadButtons.None) & GamepadButtons.View) == GamepadButtons.View)
+                if (BuWizz.IsMoving)
+                    BuWizz.StopCommand.Execute(null);
+
+            if (((GamepadReading?.Buttons ?? GamepadButtons.None) & GamepadButtons.Menu) == GamepadButtons.Menu)
+                if (!BuWizz.IsMoving)
+                    RunGamepadControlCommand.Execute(null);
         }
 
         private void Gamepad_GamepadAdded(object? sender, Gamepad e)
         {
             _gamepad = e;
+            _logger.LogInformation($"Gamepad set");
         }
 
 
