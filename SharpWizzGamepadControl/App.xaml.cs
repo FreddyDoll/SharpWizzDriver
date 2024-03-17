@@ -2,9 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpWizzDriver;
-using System.Configuration;
-using System.Data;
-using System.Runtime.InteropServices.JavaScript;
 using System.Windows;
 using Windows.Devices.Enumeration;
 
