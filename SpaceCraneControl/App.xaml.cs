@@ -22,6 +22,16 @@ namespace SpaceCraneControl
                 var logger = host.Services.GetRequiredService<ILogger<App>>();
                 logger.LogInformation("Host Building Complete");
 
+                var state = host.Services.GetRequiredService<BuWizzState>();
+                foreach (var pu in state.PuPorts)
+                    pu.Mode = PuPortFunction.PuSpeedServo;
+                state.Ports[0].Function = "Winde";
+                state.Ports[1].Function = "Vorne Knicken";
+                state.Ports[2].Function = "Vorne Heben";
+                state.Ports[3].Function = "Gegengewicht";
+                state.Ports[4].Function = "";
+                state.Ports[5].Function = "Drehen";
+
                 var mainWindow = host.Services.GetRequiredService<MainWindow>();
                 mainWindow.Show();
 

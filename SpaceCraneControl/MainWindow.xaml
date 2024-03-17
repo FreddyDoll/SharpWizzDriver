@@ -10,10 +10,67 @@
         Title="MainWindow" Height="450" Width="800"
         Closing="Window_Closing">
     <DockPanel>
-        <StackPanel DockPanel.Dock="Left">
-            <Button Content="Run GampadControl" Command="{Binding RunGamepadControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+        <DockPanel DockPanel.Dock="Left">
+            <StackPanel>
+                <GroupBox Header="Controllers">
+                    <StackPanel>
+                        <Button Content="Gamepad" Command="{Binding RunGamepadControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+                        <Button Content="Winch Controller" Command="{Binding RunWinchControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+                        <Button Content="Kinematik" Command="{Binding RunKinematikControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Header="Info">
+                    <StackPanel >
+                        <UniformGrid Rows="1">
+                            <TextBlock Text="Heben" />
+                            <TextBlock Text="{Binding TargetAngleHeben, StringFormat=N2}" />
+                            <TextBlock Text="{Binding AngleHeben.Angle, StringFormat=N2}" />
+                        </UniformGrid>
+                        <UniformGrid Rows="1">
+                            <TextBlock Text="Knicken" />
+                            <TextBlock Text="{Binding TargetAngleKnicken, StringFormat=N2}" />
+                            <TextBlock Text="{Binding AngKnicken.Angle, StringFormat=N2}" />
+                        </UniformGrid>
+                        <UniformGrid Rows="1">
+                            <TextBlock Text="Kin X" />
+                            <TextBlock Text="{Binding TargetX, StringFormat=N2}" />
+                            <TextBlock Text="{Binding TargetXfromWinch, StringFormat=N2}" />
+                            <TextBlock Text="{Binding CurrentX, StringFormat=N2}" />
+                        </UniformGrid>
+                        <UniformGrid Rows="1">
+                            <TextBlock Text="Kin Y" />
+                            <TextBlock Text="{Binding TargetY, StringFormat=N2}" />
+                            <TextBlock Text="{Binding TargetYfromWinch, StringFormat=N2}" />
+                            <TextBlock Text="{Binding CurrentY, StringFormat=N2}" />
+                        </UniformGrid>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Header="Settings">
+                    <StackPanel >
+                        <UniformGrid Rows="1">
+                            <TextBlock Text="Heben" />
+                            <TextBox Text="{Binding ContrHeben.Parameters.P, StringFormat=N2}" />
+                            <TextBox Text="{Binding ContrHeben.Parameters.Deadband, StringFormat=N2}" />
+                        </UniformGrid>
+                        <UniformGrid Rows="1">
+                            <TextBlock Text="Knicken" />
+                            <TextBox Text="{Binding ContrKnicken.Parameters.P, StringFormat=N2}" />
+                            <TextBox Text="{Binding ContrKnicken.Parameters.Deadband, StringFormat=N2}" />
+                        </UniformGrid>
+
+                        <DockPanel>
+                            <TextBlock Text="Heben (Target)" Width="100" HorizontalAlignment="Center" DockPanel.Dock="Top" />
+                            <Slider Minimum="{Binding ContrHeben.Parameters.MinTarget}" Value="{Binding TargetAngleHeben}" Maximum="{Binding ContrHeben.Parameters.MaxTarget}" />
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Knicken (Target)" Width="100" HorizontalAlignment="Center" DockPanel.Dock="Top"  />
+                            <Slider Minimum="{Binding ContrKnicken.Parameters.MinTarget}" Value="{Binding TargetAngleKnicken}" Maximum="{Binding ContrKnicken.Parameters.MaxTarget}" />
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
             <swp:BuWizzView DataContext="{Binding BuWizz}" />
-        </StackPanel>
+        </DockPanel>
         <ContentControl>
 
         </ContentControl>
