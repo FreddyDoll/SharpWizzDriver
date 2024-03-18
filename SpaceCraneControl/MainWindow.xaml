@@ -17,6 +17,8 @@
                         <Button Content="Gamepad" Command="{Binding RunGamepadControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
                         <Button Content="Winch Controller" Command="{Binding RunWinchControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
                         <Button Content="Kinematik" Command="{Binding RunKinematikControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+                        <Button Content="Derivative" Command="{Binding RunDerivativeControlCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
+                        <Button Content="Speed Calibration" Command="{Binding RunSpeedCalibrationCommand}" IsEnabled="{Binding BuWizz.CanMove}" />
                     </StackPanel>
                 </GroupBox>
                 <GroupBox Header="Info">

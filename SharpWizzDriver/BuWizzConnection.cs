@@ -48,34 +48,38 @@ namespace SharpWizzDriver
             changeState(ConnectionStates.Connecting);
             try
             {
+                _logger?.LogInformation($"Connecting to Device: {info.Name}; {info.Id}");
                 _device = await BluetoothLEDevice.FromIdAsync(info.Id);
-                _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+                _logger?.LogInformation($"Getting Gatt Services");
+                var result = await _device.GetGattServicesForUuidAsync(Guid.Parse("500592d1-74fb-4481-88b3-9919b1676e93"),BluetoothCacheMode.Cached);
+                if(result.Status != GattCommunicationStatus.Success)
+                    throw new Exception($"Get Gatt Services status: {result.Status}");
+                if (result.Services.Count == 0)
+                    throw new Exception("Could not find GATT service. List was empty");
+                var service = result.Services.First();
+                _logger?.LogInformation("Found Gatt Service");
 
-                GattDeviceServicesResult result = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
-
-                var service = result.Services.First(s => s.Uuid == Guid.Parse("500592d1-74fb-4481-88b3-9919b1676e93"));
                 var charachteristics = (await service.GetCharacteristicsAsync()).Characteristics.ToArray();
                 _applicationCharackteristic = charachteristics.First(c => c.Uuid == Guid.Parse("50052901-74fb-4481-88b3-9919b1676e93"));
+                _logger?.LogInformation("Found Gatt Charackteristic");
 
                 await _applicationCharackteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
 
                 if (_device.ConnectionStatus != BluetoothConnectionStatus.Connected)
-                {
-                    _device.Dispose();
                     throw new Exception($"Device not connected: {_device.ConnectionStatus}");
-                }
+                _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
 
                 _swTelemetryPeriod.Restart();
                 _applicationCharackteristic.ValueChanged += GattValueUpdated;
 
-
-                changeState(ConnectionStates.Connected);
-
                 _cancelWatchdog = new();
                 watchdogTask = RunWatchdog(_cancelWatchdog.Token);
+
+                changeState(ConnectionStates.Connected);
             }
             catch (Exception ex)
             {
+                await StopWatchdog();
                 _logger?.LogError(ex, "Connection failed");
                 _device?.Dispose();
                 changeState(ConnectionStates.Disconnected);
@@ -111,9 +115,7 @@ namespace SharpWizzDriver
             {
                 if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
                 {
-                    _cancelWatchdog?.Cancel();
-                    if (watchdogTask is not null)
-                        await watchdogTask;
+                    await StopWatchdog();
 
                     _device?.Dispose();
                     changeState(ConnectionStates.Disconnected);
@@ -125,6 +127,21 @@ namespace SharpWizzDriver
             }
         }
 
+        private async Task StopWatchdog()
+        {
+            _cancelWatchdog?.Cancel();
+            if (watchdogTask is not null)
+            {
+                try
+                {
+                    await watchdogTask;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "From awaiting Watchdog Task");
+                }
+            }
+        }
 
         private void GattValueUpdated(GattCharacteristic sender, GattValueChangedEventArgs args)
         {

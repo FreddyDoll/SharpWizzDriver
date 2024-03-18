@@ -126,9 +126,6 @@ namespace SpaceCraneControl
                 TargetAngleHeben = AngleHeben.Angle;
                 TargetAngleKnicken = AngKnicken.Angle;
 
-                TargetX = CurrentX;
-                TargetY = CurrentY;
-
                 ContrHeben.Init();
                 ContrKnicken.Init();
 
@@ -148,6 +145,9 @@ namespace SpaceCraneControl
         {
             try
             {
+                TargetX = CurrentX;
+                TargetY = CurrentY;
+
                 TargetAngleHeben = AngleHeben.Angle;
                 TargetAngleKnicken = AngKnicken.Angle;
 
@@ -164,9 +164,80 @@ namespace SpaceCraneControl
                 _logger.LogError(ex, nameof(RunKinematikControl));
             }
         }
+
+        [RelayCommand]
+        async Task RunDerivativeControl()
+        {
+            try
+            {
+                foreach (var item in BuWizz.State.PuPorts)
+                    item.Mode = PuPortFunction.PuSpeedServo;
+
+                await BuWizz.RunExtendedMotorData(dt => TargetsFromGamepadDerivative(), _writeTargetsInterval, _lifetime.ApplicationStopping);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, nameof(RunDerivativeControl));
+            }
+        }
+
+        [RelayCommand]
+        async Task RunSpeedCalibration()
+        {
+            try
+            {
+                foreach (var item in BuWizz.State.PuPorts)
+                    item.Mode = PuPortFunction.PuSpeedServo;
+
+                await Task.Delay(1000);
+
+                var speed = 20.0;
+                var t = 10.0;
+                _logger.LogInformation($"Knicken:");
+                await Measure(AngKnicken, [0, speed, 0, 0], t);
+                await Measure(AngKnicken,[0, -speed, 0, 0], t);
+                _logger.LogInformation($"Heben:");
+                await Measure(AngleHeben, [0, 0, speed, 0], t);
+                await Measure(AngleHeben, [0, 0, -speed, 0], t);
+
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, nameof(RunSpeedCalibration));
+            }
+        }
+
+        private async Task<CancellationTokenSource> Measure(FilteredAngle ang,double[] speeds, double t)
+        {
+            var ang1 = ang.Angle;
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.ApplicationStopping);
+            cts.CancelAfter(TimeSpan.FromSeconds(t));
+            await BuWizz.RunExtendedMotorData(dt => ConstantSpeedPU(speeds), _writeTargetsInterval, cts.Token);
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            var ang2 = ang.Angle;
+            _logger.LogInformation($"Delta Angle {ang2 - ang1} [rad]; deltaWinch {speeds.First(s => Math.Abs(s) > 0.00001) * t} []");
+            return cts;
+        }
         #endregion
 
         #region MotorTargets
+        ExtendedMotorDataArgs ConstantSpeedPU(double[] puMotors)
+        {
+            var ret = new ExtendedMotorDataArgs();
+            if (puMotors.Length != ret.PuMotors.Length)
+                throw new ArgumentException(nameof(puMotors));
+
+            for (int i = 0; i < puMotors.Length; i++)
+                ret.PuMotors[i].TargetValue = puMotors[i];
+            return ret;
+        }
+
         ExtendedMotorDataArgs TargetsFromGamepad()
         {
             var t = new ExtendedMotorDataArgs();
@@ -176,6 +247,27 @@ namespace SpaceCraneControl
             t.PuMotors[0].TargetValue = (GamepadReading.Value.RightTrigger - GamepadReading.Value.LeftTrigger) * 126;  //Winde
             t.PuMotors[1].TargetValue = GamepadReading.Value.LeftThumbstickX * 126;  //vorne knicken
             t.PuMotors[2].TargetValue = GamepadReading.Value.LeftThumbstickY * 126; //Vorne Heben
+            t.PuMotors[3].TargetValue = GamepadReading.Value.RightThumbstickY * 126;  //Gegengewicht
+
+            t.PfMotors[0].TargetValue = 0;
+            t.PfMotors[1].TargetValue = GamepadReading.Value.RightThumbstickX; //Drehen
+
+            return t;
+        }
+
+
+        ExtendedMotorDataArgs TargetsFromGamepadDerivative()
+        {
+            var t = new ExtendedMotorDataArgs();
+            if (_gamepad is null || GamepadReading is null)
+                return t;
+            var speed = 2.0;
+            var sHK = InverseKinematikDerivative(CurrentX, CurrentY, -GamepadReading.Value.LeftThumbstickX*speed, GamepadReading.Value.LeftThumbstickY*speed);
+            t.PuMotors[1].TargetValue = Math.Clamp(sHK.speedKnicken*127,-127,127);  //vorne knicken
+            t.PuMotors[2].TargetValue = Math.Clamp(sHK.speedHeben * 127, -127, 127); //Vorne Heben
+
+
+            t.PuMotors[0].TargetValue = (GamepadReading.Value.RightTrigger - GamepadReading.Value.LeftTrigger) * 126;  //Winde
             t.PuMotors[3].TargetValue = GamepadReading.Value.RightThumbstickY * 126;  //Gegengewicht
 
             t.PfMotors[0].TargetValue = 0;
@@ -259,7 +351,7 @@ namespace SpaceCraneControl
 
             if (((GamepadReading?.Buttons ?? GamepadButtons.None) & GamepadButtons.Menu) == GamepadButtons.Menu)
                 if (!BuWizz.IsMoving)
-                    RunGamepadControlCommand.Execute(null);
+                    RunDerivativeControlCommand.Execute(null);
         }
 
         private void Gamepad_GamepadAdded(object? sender, Gamepad e)
@@ -303,7 +395,7 @@ namespace SpaceCraneControl
 
         double Squared(double v) => v * v;
 
-        private (double, double) ForwardKinematik(double heben, double knicken)
+        private (double x, double y) ForwardKinematik(double heben, double knicken)
         {
             var knicken1 = knicken - Math.PI / 2.0 + heben;
             var x = Math.Cos(heben) * InnerLength + Math.Sin(knicken1) * OuterLength;
@@ -311,11 +403,31 @@ namespace SpaceCraneControl
             return (x, y);
         }
 
-        private (double, double) InverseKinematik(double x, double y)
+        private (double heben, double knicken) InverseKinematik(double x, double y)
         {
             var knicken = Math.Acos((Squared(InnerLength) + Squared(OuterLength) - (Squared(x) + Squared(y))) / (2 * InnerLength * OuterLength));
             var heben = Math.Asin(y / Math.Sqrt(Squared(x) + Squared(y))) + Math.Acos((Squared(InnerLength) + Squared(x) + Squared(y) - Squared(OuterLength)) / (2 * InnerLength * Math.Sqrt(x * x + y * y)));
             return (heben, knicken);
+        }
+        private (double speedHeben, double speedKnicken) InverseKinematikDerivative(double x, double y, double speedX, double speedY)
+        {
+            // Derivative expressions for `knicken`
+            double partialKnickenX = x / (InnerLength * OuterLength * Math.Sqrt(1 - Math.Pow((InnerLength * InnerLength + OuterLength * OuterLength - x * x - y * y) / (2 * InnerLength * OuterLength), 2)));
+            double partialKnickenY = y / (InnerLength * OuterLength * Math.Sqrt(1 - Math.Pow((InnerLength * InnerLength + OuterLength * OuterLength - x * x - y * y) / (2 * InnerLength * OuterLength), 2)));
+
+            // Derivative expressions for `heben`
+            double partialHebenX = -x * y / (Math.Pow(x * x + y * y, 1.5) * Math.Sqrt(-y * y / (x * x + y * y) + 1))
+                                   - (x / (InnerLength * Math.Sqrt(x * x + y * y)) - x * (InnerLength * InnerLength - OuterLength * OuterLength + x * x + y * y) / (2 * InnerLength * Math.Pow(x * x + y * y, 1.5)))
+                                   / Math.Sqrt(1 - Math.Pow((InnerLength * InnerLength - OuterLength * OuterLength + x * x + y * y) / (2 * InnerLength * Math.Sqrt(x * x + y * y)), 2));
+            double partialHebenY = (-y * y / Math.Pow(x * x + y * y, 1.5) + 1 / Math.Sqrt(x * x + y * y)) / Math.Sqrt(-y * y / (x * x + y * y) + 1)
+                                   - (y / (InnerLength * Math.Sqrt(x * x + y * y)) - y * (InnerLength * InnerLength - OuterLength * OuterLength + x * x + y * y) / (2 * InnerLength * Math.Pow(x * x + y * y, 1.5)))
+                                   / Math.Sqrt(1 - Math.Pow((InnerLength * InnerLength - OuterLength * OuterLength + x * x + y * y) / (2 * InnerLength * Math.Sqrt(x * x + y * y)), 2));
+
+            // Calculate rates of change of `heben` and `knicken` with respect to time
+            double speedHeben = partialHebenX * speedX + partialHebenY * speedY;
+            double speedKnicken = partialKnickenX * speedX + partialKnickenY * speedY;
+
+            return (speedHeben, speedKnicken);
         }
         #endregion
     }

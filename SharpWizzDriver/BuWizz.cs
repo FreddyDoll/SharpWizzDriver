@@ -55,6 +55,10 @@ namespace SharpWizzDriver
             connection.ConnectionChanged += Buwizz_ConnectionChanged;
 
             _deviceWatcher.Added += DeviceWatcher_Added;
+            _deviceWatcher.Removed += (sender, info) =>
+            {
+                // removed must be not null or search won't be performed
+            };
             _deviceWatcher.Updated += (sender, info) =>
             {
                 // updated must be not null or search won't be performed
@@ -78,11 +82,8 @@ namespace SharpWizzDriver
                     brakeFlags = 0x00;
 
                 await Connection.SetMotorData([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], brakeFlags, 0xff);
-                await Connection.SetPUPortFunction(
-                    PuPortFunction.PuSimplePwm,
-                    PuPortFunction.PuSimplePwm,
-                    PuPortFunction.PuSimplePwm,
-                    PuPortFunction.PuSimplePwm);
+                foreach (var item in State.PuPorts)
+                    item.Mode = PuPortFunction.PuSimplePwm;
                 await Connection.SetServoReferenceInput([0, 0, 0, 0]);
 
                 _cancelCommands = null;
@@ -359,20 +360,20 @@ namespace SharpWizzDriver
             {
                 if (e == ConnectionStates.Connecting)
                 {
-                    if (_deviceWatcher.Status == DeviceWatcherStatus.Started)
-                    {
-                        _deviceWatcher.Stop();
-                        _logger?.LogInformation($"BLE Device Watcher stopped");
-                    }
+                    while (_deviceWatcher.Status != DeviceWatcherStatus.Started)
+                        await Task.Delay(100);
+                    _deviceWatcher.Stop();
+                    _logger?.LogInformation($"BLE Device Watcher stopped");
                 }
-
                 else if (e == ConnectionStates.Disconnected)
                 {
                     await Task.Delay(2000);
+                    while (_deviceWatcher.Status != DeviceWatcherStatus.Stopped)
+                        await Task.Delay(100);
                     _deviceWatcher.Start();
                     _logger?.LogInformation($"BLE Device Watcher Started");
                 }
-                else if(e == ConnectionStates.Connected)
+                else if (e == ConnectionStates.Connected)
                 {
                     await WriteInitialState();
                     _logger?.LogInformation($"Initial State Written after Connecting");
@@ -394,6 +395,7 @@ namespace SharpWizzDriver
             try
             {
                 _logger?.LogInformation($"Found BLE Device: {args.Name}");
+
                 if (args.Name == State.Name)
                 {
                     if (Connection.ConnectionState != ConnectionStates.Disconnected)
@@ -402,7 +404,7 @@ namespace SharpWizzDriver
                         return;
                     }
 
-                    _logger?.LogInformation($"Found device: {(args.Name != string.Empty ? args.Name : args.Id)}");
+                    _logger?.LogInformation($"Connecting to: {(args.Name != string.Empty ? args.Name : args.Id)}");
                     await Connection.ConnectAsync(args);
                     _logger?.LogInformation($"Buwizz ({args.Name}) Connected!");
                 }

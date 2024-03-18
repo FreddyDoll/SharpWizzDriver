@@ -31,6 +31,7 @@ namespace SpaceCraneControl
                 state.Ports[3].Function = "Gegengewicht";
                 state.Ports[4].Function = "";
                 state.Ports[5].Function = "Drehen";
+                state.Name = "BuWizz3";
 
                 var mainWindow = host.Services.GetRequiredService<MainWindow>();
                 mainWindow.Show();
